@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "744130127094",
+    "project_id": "pressmanage",
+    "storage_bucket": "pressmanage.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:744130127094:android:225dd423ef4c78bfad38d7",
+        "android_client_info": {
+          "package_name": "com.pressmanagement"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "744130127094-e8n2rebsqvsq25vkqsef40g9r9b7d74u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pressmanagement",
+            "certificate_hash": "8e81daa916fef0709c5e097f65bb0f1c38ba4ddb"
+          }
+        },
+        {
+          "client_id": "744130127094-07uef15bdv29kdd2cpvttta6b306lg3t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAghN79Zmn0WxQxa39nYD-FtBBEuLcKUqQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "744130127094-07uef15bdv29kdd2cpvttta6b306lg3t.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "744130127094-erm31tvllpnkn4f1pbgl2n46960opm5q.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pressmanagement"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

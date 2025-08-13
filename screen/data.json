@@ -1,0 +1,53 @@
+{
+    "success": true,
+    "result": {
+        "id": 6,
+        "retailMain": 2,
+        "givenName": "Nguyễn Minh Đức",
+        "avatar": "2022/10/6_1667027400067.jpg",
+        "email": "kimlong@gmail.com",
+        "birthday": "1986-07-31",
+        "address": "Quảng Bình",
+        "phone": "0394846235",
+        "seniority": "2015-2022",
+        "journalistCard": "156479849846654",
+        "pressCard": "2022/10/press_6_1667027400074.jpg",
+        "androidToken": "fxz6mSvUTYe9ayjls27a4Y:APA91bHzUkc4OowdY8upK1J_ioOCGkN2PFC4Yd2TAr79WxSZhFkDTbVXdxAi5y3BV5GGxcVZbxdiVav5aeyAT-ENI0ICa-ohXEsLeYcPGawiYpbP1N9rRiCZmjd_IZkaAfDG-8Poi1XT",
+        "iosToken": null,
+        "webToken": null,
+        "createdAt": "2022-10-27T13:00:56.000Z",
+        "updatedAt": "2022-11-03T09:43:34.000Z",
+        "Province": {
+            "id": 1,
+            "ma": 44,
+            "parentId": null,
+            "hierarchyLevel": 1,
+            "type": null,
+            "name": "Tỉnh Quảng Bình",
+            "createdAt": "2022-11-03T08:20:30.000Z",
+            "updatedAt": "2022-11-03T08:20:30.000Z"
+        },
+        "TypeUser": {
+            "id": 7,
+            "name": "Phóng Viên"
+        },
+        "Institute": {
+            "id": 10000,
+            "parentId": null,
+            "maID": null,
+            "maED": null,
+            "name": "Thông tấn xã Việt Nam",
+            "avatar": null,
+            "description": null,
+            "typeInstituteId": 1,
+            "address": "02 Dương Văn An, Đồng Hới, QB",
+            "hierarchyLevel": 1,
+            "createdAt": "2022-11-03T04:04:04.000Z",
+            "updatedAt": "2022-11-03T04:04:04.000Z",
+            "TypeInstitute": {
+                "id": 1,
+                "name": "Đơn Vị Báo Chí"
+            }
+        }
+    }
+}

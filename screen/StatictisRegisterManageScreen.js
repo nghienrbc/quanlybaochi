@@ -1,0 +1,1798 @@
+import React, { useRef, useState, useEffect } from "react";
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+    StatusBar,
+    Image,
+    ScrollView,
+    Animated,
+    FlatList,
+    SafeAreaView,
+} from 'react-native';
+
+import {
+    VictoryPie, VictoryAxis, VictoryBar, VictoryChart, VictoryGroup, VictoryLabel
+} from 'victory-native';
+import { Svg } from 'react-native-svg';
+import { COLORS, FONTS, SIZES, colors } from '../constants'
+import { statictis as statictisRepo, institute as instituteRepo, journalist as journalistRepo } from "../repositories"
+
+import { getMyStringValue } from "../utilies/LocalDataHandler"
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import DatePicker from 'react-native-date-picker'
+import { convertDateTimeToDateString } from "../utilies/DateTime"
+import Icon1 from 'react-native-vector-icons/MaterialIcons'
+import Export from 'react-native-vector-icons/FontAwesome5'
+import SectionedMultiSelect from 'react-native-sectioned-multi-select';
+import DropdownMultiSelect from '../Component/DropdownMultiSelect';
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
+
+import { CallCustomAlert } from "../utilies";
+import { ExportToExcel } from "../utilies"
+import AppLoader from '../utilies/AppLoader';
+
+function StatictisRegisterManageScreen(props) {
+
+    const { navigation, route } = props
+    //functions of navigate to/back
+    const { navigate, goBack } = navigation
+
+    ///////////////// ASYGN STORAGE ///////////////////////
+    const [showLoading, setShowLoading] = useState(false)
+    const [tokenString, setTokenString] = useState('')
+    const [userID, setUserID] = useState('')
+    const [userTypeID, setUserTypeID] = useState('')
+    const [instituteID, setInstituteID] = useState('')
+
+    const [fromDate, setFromDate] = useState(null)
+    const [toDate, setToDate] = useState(null)
+    const [openToDate, setOpenToDate] = useState(false)
+    const [openFromDate, setOpenFromDate] = useState(false)
+    const [fromDateString, setFromDateString] = useState('')
+    const [toDateString, setToDateString] = useState('')
+
+    const [isManage, setIsManage] = useState(false)
+
+    const [statictisTotal, setStatictisTotal] = useState(null)
+
+    const [statictisPressAgency, setStatictisPressAgency] = useState(null)
+    const [statictisJournalist, setStatictisJournalist] = useState(null)
+    const [statictisInstitute, setStatictisInstitute] = useState(null)
+    const [statictisProvince, setStatictisProvince] = useState([])
+
+    const categoryListHeightAnimationValue = useRef(new Animated.Value(115)).current;
+
+    const [categories, setCategories] = useState([]);
+    const [viewMode, setViewMode] = useState("chart");
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [showMoreToggle, setShowMoreToggle] = useState(false)
+
+    const [pressInstitute, setPressInstitute] = useState([])
+    const [jounalists, setJounalists] = useState([])
+    const [institute, setInstitute] = useState([])
+
+    const [strangePressInstitute, setStrangePressInstitute] = useState([])
+    const [strangeJounalists, setStrangeJounalists] = useState([])
+
+    const [allPressInstitute, setAllPressInstitute] = useState([])
+    const [allJounalists, setAllJounalists] = useState([])
+
+    const [selectedPressAgencyItems, setSelectedPressAgencyItems] = useState([])
+    const [selectedJournalistItems, setSelectedJournalistItems] = useState([])
+    const [selectedInstituteItems, setSelectedInstituteItems] = useState([])
+    const [searchText, setSearchText] = useState('');
+
+    const [isFirstShowChart, setIsFirstShowChart] = useState(true)
+    const [isClickOnSegment, setIsClickOnSegment] = useState(false)
+    const [pressAgencyData, setPressAgencyData] = useState(null)
+    const [journalistData, setJournalistData] = useState(null)
+    const [instituteReportData, setInstituteReportData] = useState(null)
+    const [provinceData, setProvinceData] = useState(null)
+
+    const [segmentIndex, setSegmentIndex] = useState(0)
+
+    getMyStringValue("userTypeID").then((value) => {
+        const data = value;
+        setUserTypeID(data)
+        setIsManage(data == 2)
+    })
+    getMyStringValue("userID").then((value) => {
+        const data = value;
+        setUserID(data)
+    })
+
+    getMyStringValue("token").then((value) => {
+        const data = value;
+        setTokenString(data)
+    })
+
+    const handleSearchTextChange = (text) => {
+        setSearchText(text);
+    };
+    ////////////////// GET VALUE FROM NAVIGATION //////////// 
+
+    useEffect(() => {
+        //debuggerh
+        let statictisName = 'Thống kê đăng ký làm việc'
+        navigation.setOptions(
+            {
+                headerShown: true,
+                headerTitle: statictisName,
+                headerTitleStyle: { fontSize: 17, fontWeight: 'bold' },
+                headerTitleAlign: 'center',
+                headerStyle: {
+                    backgroundColor: colors.newprimary
+                },
+                headerTintColor: 'white'
+
+            })
+    }, [])
+
+    ///////////////// LẤY DỮ LIỆU BAN ĐẦU /////////////////////////////
+    useEffect(() => {
+        if (tokenString != '') {
+            var curentDate = new Date()
+            setToDate(new Date(curentDate.setMonth(curentDate.getMonth() + 12)))
+            setFromDate(new Date(curentDate.setMonth(curentDate.getMonth() - 24)))
+
+            setShowLoading(true)
+            instituteRepo.getAllPressInstitute(tokenString)
+                .then(
+                    responseInstitute => {
+                        setPressInstitute(responseInstitute)
+                    }
+                )
+                .then(
+                    journalistRepo.getAllJournalist(tokenString, 7)
+                        .then(responseJounalist => {
+                            setJounalists(responseJounalist)
+                            setShowLoading(false)
+                        })
+                        .then(
+                            instituteRepo.getAllStrangePressInstitute(tokenString)
+                                .then(
+                                    responseInstitute => {
+                                        setStrangePressInstitute(responseInstitute)
+                                    }
+                                )
+                                .then(
+                                    journalistRepo.getAllStrangeJournalist(tokenString, 7)
+                                        .then(responseJounalist => {
+                                            setStrangeJounalists(responseJounalist)
+                                        })
+                                        .then(
+                                            instituteRepo.getAllInstitute(tokenString)
+                                                .then(
+                                                    responseInstitute => {
+                                                        setInstitute(responseInstitute)
+                                                        setShowLoading(false)
+                                                    }
+                                                )
+                                                .catch(
+                                                    errorMessage => {
+                                                        setShowLoading(false)
+                                                        if (errorMessage != 'Not found') CallCustomAlert.showAlertWith(string.CANT_CONNECT_SERVER, "error", "OK")
+                                                    }
+                                                )
+                                        )
+                                        .catch(
+                                            errorMessage => {
+                                                setShowLoading(false)
+                                                if (errorMessage != 'Not found') CallCustomAlert.showAlertWith(string.CANT_CONNECT_SERVER, "error", "OK")
+                                            }
+                                        )
+                                )
+                                .catch(
+                                    errorMessage => {
+                                        setShowLoading(false)
+                                        if (errorMessage != 'Not found') CallCustomAlert.showAlertWith(string.CANT_CONNECT_SERVER, "error", "OK")
+                                    }
+                                )
+                        )
+                        .catch(
+                            errorMessage => {
+                                setShowLoading(false)
+                                if (errorMessage != 'Not found') CallCustomAlert.showAlertWith(string.CANT_CONNECT_SERVER, "error", "OK")
+                            }
+                        )
+                )
+                .catch(
+                    errorMessage => {
+                        setShowLoading(false)
+                        if (errorMessage != 'Not found') CallCustomAlert.showAlertWith(string.CANT_CONNECT_SERVER, "error", "OK")
+                    }
+                )
+        }
+    }, [tokenString])
+
+    const instituteData = []
+    if (institute.length > 0) {
+        institute.forEach(element => {
+            instituteData.push({
+                "item": element.name,
+                "label": element.name,
+                "value": element.id,
+                "id": element.id,
+                'name': element.name,
+                'parentId': element.parentId,
+                'hierarchyLevel': element.hierarchyLevel,
+                'address': element.address,
+                'maED': element.maED
+            })
+            element.children && element.children.forEach(childElement1 => {
+                instituteData.push({
+                    "item": childElement1.name,
+                    "label": childElement1.name,
+                    "value": childElement1.id,
+                    "id": childElement1.id,
+                    'name': childElement1.name,
+                    'parentId': childElement1.parentId,
+                    'hierarchyLevel': childElement1.hierarchyLevel,
+                    'address': childElement1.address,
+                    'maED': childElement1.maED
+                })
+                childElement1.children && childElement1.children.forEach(childElement2 => {
+                    instituteData.push({
+                        "item": childElement2.name + ' - ' + childElement1.name,
+                        "label": childElement2.name + ' - ' + childElement1.name,
+                        "value": childElement2.id,
+                        "id": childElement2.id,
+                        'name': childElement2.name + ' - ' + childElement1.name,
+                        'parentId': childElement2.parentId,
+                        'hierarchyLevel': childElement2.hierarchyLevel,
+                        'address': childElement2.address,
+                        'maED': childElement2.maED
+                    })
+                    childElement2.children && childElement2.children.forEach(childElement3 => {
+                        instituteData.push({
+                            "item": childElement3.name,
+                            "label": childElement3.name,
+                            "value": childElement3.id,
+                            "id": childElement3.id,
+                            'name': childElement3.name,
+                            'parentId': childElement3.parentId,
+                            'hierarchyLevel': childElement3.hierarchyLevel,
+                            'address': childElement3.address,
+                            'maED': childElement3.maED
+                        })
+                    })
+                })
+            })
+        })
+    }
+
+    useEffect(() => {
+        if (!isClickOnSegment) return;
+        setIsClickOnSegment(false)
+        if (segmentIndex == 1) {
+        }
+
+        else if (segmentIndex == 2) { // call api lấy cơ quan báo chí vãng lai và phóng viên vãng lai 
+        }
+    }, [segmentIndex])
+
+
+    const allPressInstituteData = []
+
+    const pressInstituteData = []
+    if (pressInstitute.length > 0) {
+        pressInstitute.forEach(element => {
+            pressInstituteData.push({
+                "item": element.name,
+                "label": element.name,
+                "value": element.id,
+                "id": element.id,
+                'name': element.name,
+                'hierarchyLevel': element.hierarchyLevel,
+                'address': element.address,
+                'avatar': element.avatar
+            })
+            allPressInstituteData.push({
+                "item": element.name,
+                "label": element.name,
+                "value": element.id,
+                "id": element.id,
+                'name': element.name,
+                'hierarchyLevel': element.hierarchyLevel,
+                'address': element.address,
+                'avatar': element.avatar
+            })
+        })
+    }
+
+    const strangePressInstituteData = []
+    if (strangePressInstitute.length > 0) {
+        strangePressInstitute.forEach(element => {
+            strangePressInstituteData.push({
+                "item": element.name,
+                "label": element.name,
+                "value": element.id,
+                "id": element.id,
+                'name': element.name,
+                'hierarchyLevel': element.hierarchyLevel,
+                'address': element.address,
+                'avatar': element.avatar
+            })
+            allPressInstituteData.push({
+                "item": element.name,
+                "label": element.name,
+                "value": element.id,
+                "id": element.id,
+                'name': element.name,
+                'hierarchyLevel': element.hierarchyLevel,
+                'address': element.address,
+                'avatar': element.avatar
+            })
+        })
+    }
+    const onSelectedItemsChange = (selectedPressAgencyItems) => {
+        setSelectedPressAgencyItems(selectedPressAgencyItems)
+    };
+    const onSelectedJournalistItemsChange = (selectedJournalistItems) => {
+        setSelectedJournalistItems(selectedJournalistItems)
+    };
+
+    const onSelectedInstituteItemsChange = (selectedInstituteItems) => {
+        setSelectedInstituteItems(selectedInstituteItems)
+    };
+
+    const jounalistObjArray = []
+    const allJounalistObjArray = []
+    //console.log(jounalists)
+    jounalists.forEach(element => {
+        if (element.Institute) {
+            const { name: instituteName, id: instituteId } = element.Institute;
+            const { givenName: childName, id: childId } = element;
+            const existingJournalist = jounalistObjArray.find(journalist => journalist.id === instituteId);
+
+            if (existingJournalist) {
+                existingJournalist.children.push({ name: childName, id: childId });
+            }
+            else {
+                const journalist = {
+                    name: instituteName,
+                    id: instituteId,
+                    children: [{ name: childName, id: childId }]
+                };
+
+                jounalistObjArray.push(journalist);
+                allJounalistObjArray.push(journalist);
+            }
+        }
+    });
+
+    const strangeJounalistObjArray = []
+    //console.log(jounalists)
+    strangeJounalists.forEach(element => {
+        if (element.Institute) {
+            const { name: instituteName, id: instituteId } = element.Institute;
+            const { givenName: childName, id: childId } = element;
+            const existingJournalist = strangeJounalistObjArray.find(journalist => journalist.id === instituteId);
+
+            if (existingJournalist) {
+                existingJournalist.children.push({ name: childName, id: childId });
+            }
+            else {
+                const journalist = {
+                    name: instituteName,
+                    id: instituteId,
+                    children: [{ name: childName, id: childId }]
+                };
+
+                strangeJounalistObjArray.push(journalist);
+                allJounalistObjArray.push(journalist);
+            }
+        }
+    });
+
+    useEffect(() => {
+        //debugger
+        if (toDate != null && fromDate != null) {
+            setToDateString(convertDateTimeToDateString(toDate));
+            setFromDateString(convertDateTimeToDateString(fromDate));
+            if (isFirstShowChart == true) {
+                setIsFirstShowChart(false)
+                onShowChartTotal()
+                onShowChartOfPressAgency()
+                onShowChartOfJournalist()
+                onShowChartOfInstitute()
+                onShowChartOfProvince()
+            }
+        }
+    }, [toDate, fromDate])
+
+
+    const onShowChartTotal = () => {
+        //debugger
+        if (!toDate || !fromDate || toDate <= fromDate) {
+            CallCustomAlert.showAlertWith("Chọn thời gian thống kê chưa phù hợp", "error", "OK")
+            return
+        }
+        setShowLoading(true)
+        statictisRepo.getRegistrationStatictisManage(tokenString, new Date(fromDate).getTime(), new Date(toDate).getTime(), segmentIndex == 0 ? 2 : segmentIndex == 1 ? 0 : 1)
+            .then(responseStatictis => {
+                setStatictisTotal(responseStatictis)
+                setShowLoading(false)
+            })
+            .catch(
+                errorMessage => {
+                    setShowLoading(false)
+                    CallCustomAlert.showAlertWith(errorMessage == 'Not found' ? string.NOT_FOUND : string.CANT_CONNECT_SERVER, "error", "OK")
+                }
+            )
+    }
+
+    const onShowChartOfPressAgency = () => {
+        debugger
+        if (!toDate || !fromDate || toDate <= fromDate) {
+            CallCustomAlert.showAlertWith("Chọn thời gian thống kê chưa phù hợp", "error", "OK")
+            return
+        }
+        setPressAgencyData(null)
+        setShowLoading(true)
+        statictisRepo.getRegistrationStatictisManage(tokenString, new Date(fromDate).getTime(), new Date(toDate).getTime(), segmentIndex == 0 ? 2 : segmentIndex == 1 ? 0 : 1)
+            .then(responseStatictis => {
+                //debugger
+                setStatictisPressAgency(responseStatictis)
+                setShowLoading(false)
+            })
+            .catch(
+                errorMessage => {
+                    setShowLoading(false)
+                    CallCustomAlert.showAlertWith(errorMessage == 'Not found' ? string.NOT_FOUND : string.CANT_CONNECT_SERVER, "error", "OK")
+                }
+            )
+    }
+
+    const onShowChartOfJournalist = () => {
+        //debugger
+        if (!toDate || !fromDate || toDate <= fromDate) {
+            CallCustomAlert.showAlertWith("Chọn thời gian thống kê chưa phù hợp", "error", "OK")
+            return
+        }
+
+        setJournalistData(null)
+        setShowLoading(true)
+        statictisRepo.getRegistrationStatictisManage(tokenString, new Date(fromDate).getTime(), new Date(toDate).getTime(), segmentIndex == 0 ? 2 : segmentIndex == 1 ? 0 : 1)
+            .then(responseStatictis => {
+                //debugger
+                setStatictisJournalist(responseStatictis)
+                setShowLoading(false)
+            })
+            .catch(
+                errorMessage => {
+                    setShowLoading(false)
+                    CallCustomAlert.showAlertWith(errorMessage == 'Not found' ? string.NOT_FOUND : string.CANT_CONNECT_SERVER, "error", "OK")
+                }
+            )
+    }
+
+    const onShowChartOfInstitute = () => {
+        //debugger
+        if (!toDate || !fromDate || toDate <= fromDate) {
+            CallCustomAlert.showAlertWith("Chọn thời gian thống kê chưa phù hợp", "error", "OK")
+            return
+        }
+
+        setInstituteReportData(null)
+        setShowLoading(true)
+        statictisRepo.getRegistrationStatictisManage(tokenString, new Date(fromDate).getTime(), new Date(toDate).getTime(), segmentIndex == 0 ? 2 : segmentIndex == 1 ? 0 : 1)
+            .then(responseStatictis => {
+                //debugger
+                setStatictisInstitute(responseStatictis)
+                setShowLoading(false)
+            })
+            .catch(
+                errorMessage => {
+                    setShowLoading(false)
+                    CallCustomAlert.showAlertWith(errorMessage == 'Not found' ? string.NOT_FOUND : string.CANT_CONNECT_SERVER, "error", "OK")
+                }
+            )
+    }
+
+    const onShowChartOfProvince = () => {
+        //debugger
+        if (!toDate || !fromDate || toDate <= fromDate) {
+            CallCustomAlert.showAlertWith("Chọn thời gian thống kê chưa phù hợp", "error", "OK")
+            return
+        }
+
+        setProvinceData(null)
+        setShowLoading(true)
+        statictisRepo.getRegistrationStatictisByProvinceFromManage(tokenString, new Date(fromDate).getTime(), new Date(toDate).getTime(), segmentIndex == 0 ? 2 : segmentIndex == 1 ? 0 : 1)
+            .then(responseStatictis => {
+                //debugger
+                setStatictisProvince(responseStatictis)
+                setShowLoading(false)
+            })
+            .catch(
+                errorMessage => {
+                    setShowLoading(false)
+                    CallCustomAlert.showAlertWith(errorMessage == 'Not found' ? string.NOT_FOUND : string.CANT_CONNECT_SERVER, "error", "OK")
+                }
+            )
+    }
+
+    useEffect(() => {
+        setCategories(categoriesData);
+        categoriesData[0].total = 0;
+        categoriesData[1].total = 0;
+        categoriesData[2].total = 0;
+        categoriesData[3].total = 0;
+        categoriesData[4].total = 0;
+
+        if (statictisTotal !== null) { // Check if statictisTotal is an array and has data
+            statictisTotal.cound_data.forEach(element => {
+                // kiểm tra nếu session đó phóng viên đã join vào thì không đưa vào danh sách nữa   
+                categoriesData[0].total += parseInt(element.finish); // Increment total for "Hoàn thành"
+                categoriesData[1].total += parseInt(element.wait2); // Increment total for "Chờ phê duyệt"
+                categoriesData[2].total += parseInt(element.wait3); // Increment total for "Đã phản hồi"
+                categoriesData[3].total += parseInt(element.agree); // Increment total for "Chờ làm việc"
+                categoriesData[4].total += parseInt(element.cancel); // Increment total for "Hủy đăng ký"
+            });
+        }
+    }, [statictisTotal]);
+
+    let categoriesData = [
+        {
+            id: 4,
+            name: "Hoàn thành",
+            color: colors.workDone,
+            total: 0,
+        },
+        {
+            id: 1,
+            name: "Chờ phê duyệt",
+            color: colors.waitConfirm,
+            total: 0,
+        },
+        {
+            id: 2,
+            name: "Đã phản hồi",
+            color: colors.hadResponsed,
+            total: 0,
+        },
+        {
+            id: 5,
+            name: "Chờ làm việc",
+            color: colors.waitWorking,
+            total: 0,
+        },
+        {
+            id: 6,
+            name: "Hủy đăng ký",
+            color: colors.cancel,
+            total: 0,
+        },
+    ]
+
+    function processCategoryDataToDisplay() {
+        // Filter with "Confirmed" status
+        let chartData = categories.map((item) => {
+            //debugger
+            var total = item.total
+
+            return {
+                name: item.name,
+                y: total,
+                color: item.color,
+                id: item.id
+            }
+        })
+        // filter out categories with no data/Static 
+        let filterChartData = chartData.filter(a => a.y > 0)
+        // Calculate the total Static 
+        let totalStatic = filterChartData.reduce((a, b) => a + (b.y || 0), 0)
+        // Calculate percentage and repopulate chart data
+        let finalChartData = filterChartData.map((item) => {
+            let percentage = (item.y / totalStatic * 100).toFixed(0)
+            return {
+                label: `${percentage}%`,
+                y: Number(item.y),
+                color: item.color,
+                name: item.name,
+                id: item.id
+            }
+        })
+        return finalChartData
+    }
+
+    function setSelectCategoryByName(name) {
+        let category = categories.filter(a => a.name == name)
+        setSelectedCategory(category[0])
+    }
+
+    function renderChart() {
+        let chartData = processCategoryDataToDisplay()
+        let colorScales = chartData.map((item) => item.color)
+        let totalActiveCount = chartData.reduce((a, b) => a + (b.y || 0), 0)
+        return (
+            <View style={{
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: 'white', marginBottom: 10,
+                borderRadius: 20
+            }}>
+                <Svg width={SIZES.width} height={SIZES.width} style={{ width: "100%", height: "auto" }}>
+                    <VictoryPie
+                        standalone={false} // Android workaround
+                        data={chartData}
+                        labels={(datum) => `${datum.y}`}
+                        radius={({ datum }) => (selectedCategory && selectedCategory.name == datum.name)
+                            ? SIZES.width * 0.4 : SIZES.width * 0.4 - 10}
+                        innerRadius={70}
+                        labelRadius={({ innerRadius }) => (SIZES.width * 0.4 + innerRadius) / 2.5}
+                        style={{
+                            labels: { fill: "white" },
+                            parent: {
+                                ...styles.shadow
+                            },
+                        }}
+                        width={SIZES.width}
+                        height={SIZES.width}
+                        colorScale={colorScales}
+                        events={[{
+                            target: "data",
+                            eventHandlers: {
+                                onPress: () => {
+                                    return [{
+                                        target: "labels",
+                                        mutation: (props) => {
+                                            let categoryName = chartData[props.index].name
+                                            setSelectCategoryByName(categoryName)
+                                        }
+                                    }]
+                                }
+                            }
+                        }]}
+                    />
+                </Svg>
+                <View style={{ position: 'absolute' }}>
+                    <Text style={{
+                        ...FONTS.h1,
+                        textAlign: 'center'
+                    }}>{totalActiveCount}</Text>
+                    <Text style={{
+                        ...FONTS.body3,
+                        textAlign: 'center'
+                    }}>Đăng ký</Text>
+                </View>
+            </View>
+        )
+    }
+
+    function renderStaticsSummary() {
+        let data = processCategoryDataToDisplay()
+        const renderItem = ({ item }) => {
+            return (
+                <TouchableOpacity style={{
+                    flexDirection: 'row',
+                    height: 40,
+                    paddingHorizontal: SIZES.radius,
+                    borderRadius: 1,
+                    backgroundColor: (selectedCategory && selectedCategory.name == item.name)
+                        ? item.color : COLORS.white
+                }}
+                    onPress={() => {
+                        let categoryName = item.name
+                        setSelectCategoryByName(categoryName)
+                    }}
+                >
+
+                    {/* Name/Category */}
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{
+                            width: 20,
+                            height: 20,
+                            backgroundColor: (selectedCategory && selectedCategory.name == item.name)
+                                ? COLORS.white : item.color,
+                            borderRadius: 5
+                        }}>
+                        </View>
+                        <Text style={{
+                            marginLeft: SIZES.base,
+                            color: (selectedCategory && selectedCategory.name == item.name)
+                                ? COLORS.white : COLORS.primary, ...FONTS.h3
+                        }}>{item.name}</Text>
+                    </View>
+
+                    {/* register */}
+                    <View style={{ justifyContent: 'center' }}>
+                        <Text style={{
+                            color: (selectedCategory && selectedCategory.name == item.name)
+                                ? COLORS.white : COLORS.primary, ...FONTS.h3
+                        }}>{item.y}</Text>
+                    </View>
+                </TouchableOpacity>
+            )
+        }
+
+        return (
+            <ScrollView
+                horizontal={true}
+                contentContainerStyle={styles.scrollViewContainer}
+            >
+                <FlatList
+                    data={data}
+                    renderItem={renderItem}
+                    keyExtractor={item => `${item.id}`}
+                />
+            </ScrollView>
+        )
+    }
+
+    // chart theo đơn vị báo chí
+    useEffect(() => {
+        let wait2Array = []
+        let wait3Array = []
+        let agreeArray = []
+        let cancelArray = []
+        let finishArray = []
+        let pressInstituteReportArray = []
+        // tạo mảng lưu theo tên của cơ quan báo chí (dựa vào id giống nhau) rồi cộng dồn các trạng thái lại để thành mảng data cuổi cùng
+        if (statictisPressAgency != null) {
+            let hasResult = false
+            if (statictisPressAgency.groupedDataArray.length > 0) {
+                statictisPressAgency.groupedDataArray.forEach(element => {
+                    if (element.data.length > 0) {
+                        element.data.forEach(dataElement => {
+                            // kiểm tra xem có chọn đơn vị báo chí cụ thể để thông kê không
+                            let isChoosePressInstituteForReport = false;
+                            selectedPressAgencyItems.forEach(element1 => {
+
+                                if (element1 == dataElement.iddvbc) {
+                                    isChoosePressInstituteForReport = true
+                                    hasResult = true
+                                }
+                            })
+                            if (isChoosePressInstituteForReport == true || selectedPressAgencyItems.length == 0) {
+                                if (pressInstituteReportArray.length == 0) {
+                                    pressInstituteReportArray.push({
+                                        'id': dataElement.iddvbc, 'name': dataElement.namedvbc, 'wait2': parseInt(dataElement.wait2),
+                                        'wait3': parseInt(dataElement.wait3), 'agree': parseInt(dataElement.agree), 'cancel': parseInt(dataElement.cancel), 'finish': parseInt(dataElement.finish)
+                                    })
+                                }
+                                else {
+                                    let checkExist = false;
+                                    pressInstituteReportArray.forEach(instituteElement => {
+                                        if (instituteElement.id == dataElement.iddvbc) {
+                                            checkExist = true
+                                            // cập nhật lại pressInstituteReportArray tại instituteElement  
+                                            const newState = pressInstituteReportArray.map(obj => {
+                                                // 👇️ if id equals 2, update country property
+                                                if (obj.id === dataElement.iddvbc) {
+                                                    return {
+                                                        'id': dataElement.iddvbc, 'name': dataElement.namedvbc, 'wait2': instituteElement.wait2 + parseInt(dataElement.wait2),
+                                                        'wait3': instituteElement.wait3 + parseInt(dataElement.wait3), 'agree': instituteElement.agree + parseInt(dataElement.agree),
+                                                        'cancel': instituteElement.cancel + parseInt(dataElement.cancel), 'finish': instituteElement.finish + parseInt(dataElement.finish)
+                                                    };
+                                                }
+                                                // 👇️ otherwise return the object as is
+                                                return obj;
+                                            });
+                                            pressInstituteReportArray = newState;
+                                        }
+                                    })
+                                    if (checkExist == false) {
+                                        pressInstituteReportArray.push({
+                                            'id': dataElement.iddvbc, 'name': dataElement.namedvbc, 'wait2': parseInt(dataElement.wait2),
+                                            'wait3': parseInt(dataElement.wait3), 'agree': parseInt(dataElement.agree), 'cancel': parseInt(dataElement.cancel), 'finish': parseInt(dataElement.finish)
+                                        })
+                                    }
+                                }
+                            }
+                        })
+                    }
+                })
+            }
+            if (statictisPressAgency != null) {
+                pressInstituteReportArray.length > 0 && pressInstituteReportArray.forEach(element => {
+                    wait2Array.push({ 'x': element.name, 'y': parseInt(element.wait2) > 0 ? parseInt(element.wait2) : null, 'label': parseInt(element.wait2) > 0 ? element.wait2 : null })
+                    wait3Array.push({ 'x': element.name, 'y': parseInt(element.wait3) > 0 ? parseInt(element.wait3) : null, 'label': parseInt(element.wait3) > 0 ? element.wait3 : null })
+                    agreeArray.push({ 'x': element.name, 'y': parseInt(element.agree) > 0 ? parseInt(element.agree) : null, 'label': parseInt(element.agree) > 0 ? element.agree : null })
+                    cancelArray.push({ 'x': element.name, 'y': parseInt(element.cancel) > 0 ? parseInt(element.cancel) : null, 'label': parseInt(element.cancel) > 0 ? element.cancel : null })
+                    finishArray.push({ 'x': element.name, 'y': parseInt(element.finish) > 0 ? parseInt(element.finish) : null, 'label': parseInt(element.finish) > 0 ? element.finish : null })
+                })
+            }
+            (selectedPressAgencyItems.length == 0 || selectedPressAgencyItems.length > 0 && hasResult) && pressInstituteReportArray.length > 0 && setPressAgencyData({ 'wait2': wait2Array, 'wait3': wait3Array, 'agree': agreeArray, 'cancel': cancelArray, 'finish': finishArray })
+        }
+    }, [statictisPressAgency])
+
+    const StatisticColumn = () => {
+        return <View style={{ backgroundColor: 'white' }}>
+            <View style={{ flexDirection: 'row', marginHorizontal: 5, marginTop: 5, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ backgroundColor: colors.waitConfirm, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ Phê duyệt</Text>
+                <View style={{ backgroundColor: colors.hadResponsed, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ phản hồi</Text>
+                <View style={{ backgroundColor: colors.waitWorking, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ làm việc</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', marginHorizontal: 5, marginTop: 5, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ backgroundColor: colors.cancel, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Hủy đăng ký</Text>
+                <View style={{ backgroundColor: colors.workDone, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Hoàn thành</Text>
+            </View>
+            <ScrollView horizontal={true}>
+                <View style={{ width: pressAgencyData.wait2.length * 160 > SIZES.width ? pressAgencyData.wait2.length * 160 : SIZES.width - 40, borderRadius: 20 }}>
+                    <VictoryChart
+                        domainPadding={50}
+                        width={pressAgencyData.wait2.length * 160 > SIZES.width ? pressAgencyData.wait2.length * 160 : SIZES.width - 40}
+                        height={300}
+                        style={{
+                            parent: {
+                                backgroundColor: "white",
+                                padding: 0
+                            },
+                        }}
+                    >
+                        <VictoryAxis
+                            tickLabelComponent={<VictoryLabel angle={5} />}
+                            style={{
+                                axisLabel: { fontSize: 16, fill: "red", padding: 30, x: 0 },
+                                ticks: { stroke: "black", size: 5 },
+                                tickLabels: { fontSize: 13, padding: 2 },
+                                grid: { stroke: "lightgray" },
+                            }}
+                            tickCount={10}
+                        />
+
+                        <VictoryAxis
+                            dependentAxis
+                            style={{
+                                axisLabel: { fontSize: 16, fill: "red", padding: 30 },
+                                ticks: { stroke: "black", size: 5 },
+                                tickLabels: { fontSize: 12, padding: 5 },
+                                grid: { stroke: "lightgray" },
+                            }}
+                            tickCount={10}
+                        />
+                        <VictoryGroup
+                            offset={pressAgencyData.wait2.length > 1 ? 12 : 20}
+                            style={{ marginLeft: 0 }}>
+                            <VictoryBar data={pressAgencyData.wait2}
+                                style={{
+                                    data: {
+                                        fill: colors.waitConfirm,
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={pressAgencyData.wait3}
+                                style={{
+                                    data: {
+                                        fill: colors.hadResponsed
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={pressAgencyData.agree}
+                                style={{
+                                    data: {
+                                        fill: colors.waitWorking
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={pressAgencyData.cancel}
+                                style={{
+                                    data: {
+                                        fill: colors.cancel
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={pressAgencyData.finish}
+                                style={{
+                                    data: {
+                                        fill: colors.workDone
+                                    },
+                                }}
+                            />
+                        </VictoryGroup>
+                    </VictoryChart>
+                </View>
+            </ScrollView>
+        </View>
+
+    };
+
+    // chart theo phóng viên
+    useEffect(() => {
+        let wait2Array = []
+        let wait3Array = []
+        let agreeArray = []
+        let cancelArray = []
+        let finishArray = []
+        let journalistReportArray = []
+
+        // tạo mảng lưu theo tên của cơ quan báo chí (dựa vào id giống nhau) rồi cộng dồn các trạng thái lại để thành mảng data cuổi cùng
+        if (statictisJournalist != null) {
+            let hasResult = false
+            if (statictisJournalist.groupedDataArray.length > 0) {
+                statictisJournalist.groupedDataArray.forEach(element => {
+                    if (element.data.length > 0) {
+                        element.data.forEach(dataElement => {
+                            // kiểm tra xem có chọn đơn vị báo chí cụ thể để thông kê không
+                            let isChooseJournalistForReport = false;
+                            selectedJournalistItems.forEach(element1 => {
+                                if (element1 == dataElement.userid) {
+                                    isChooseJournalistForReport = true
+                                    hasResult = true
+                                }
+                            })
+                            // nếu có cơ quan báo chí trong danh sách chọn để báo cáo hoặc không chọn cqbc
+                            if (isChooseJournalistForReport == true || selectedJournalistItems.length == 0) {
+                                if (journalistReportArray.length == 0) {
+                                    journalistReportArray.push({
+                                        'id': dataElement.userid, 'name': dataElement.usersender, 'wait2': parseInt(dataElement.wait2),
+                                        'wait3': parseInt(dataElement.wait3), 'agree': parseInt(dataElement.agree), 'cancel': parseInt(dataElement.cancel), 'finish': parseInt(dataElement.finish)
+                                    })
+                                }
+                                else {
+                                    let checkExist = false;
+                                    journalistReportArray.forEach(instituteElement => {
+                                        if (instituteElement.id == dataElement.userid) {
+                                            checkExist = true
+                                            // cập nhật lại journalistReportArray tại instituteElement  
+                                            const newState = journalistReportArray.map(obj => {
+                                                // 👇️ if id equals 2, update country property
+                                                if (obj.id === dataElement.userid) {
+                                                    return {
+                                                        'id': dataElement.userid, 'name': dataElement.usersender, 'wait2': instituteElement.wait2 + parseInt(dataElement.wait2),
+                                                        'wait3': instituteElement.wait3 + parseInt(dataElement.wait3), 'agree': instituteElement.agree + parseInt(dataElement.agree),
+                                                        'cancel': instituteElement.cancel + parseInt(dataElement.cancel), 'finish': instituteElement.finish + parseInt(dataElement.finish)
+                                                    };
+                                                }
+                                                // 👇️ otherwise return the object as is
+                                                return obj;
+                                            });
+                                            journalistReportArray = newState;
+                                        }
+                                    })
+                                    if (checkExist == false) {
+                                        journalistReportArray.push({
+                                            'id': dataElement.userid, 'name': dataElement.usersender, 'wait2': parseInt(dataElement.wait2),
+                                            'wait3': parseInt(dataElement.wait3), 'agree': parseInt(dataElement.agree), 'cancel': parseInt(dataElement.cancel), 'finish': parseInt(dataElement.finish)
+                                        })
+                                    }
+                                }
+                            }
+                        })
+                    }
+                })
+            }
+            if (statictisJournalist != null) {
+                journalistReportArray.length > 0 && journalistReportArray.forEach(element => {
+                    wait2Array.push({ 'x': element.name, 'y': parseInt(element.wait2) > 0 ? parseInt(element.wait2) : null, 'label': parseInt(element.wait2) > 0 ? element.wait2 : null })
+                    wait3Array.push({ 'x': element.name, 'y': parseInt(element.wait3) > 0 ? parseInt(element.wait3) : null, 'label': parseInt(element.wait3) > 0 ? element.wait3 : null })
+                    agreeArray.push({ 'x': element.name, 'y': parseInt(element.agree) > 0 ? parseInt(element.agree) : null, 'label': parseInt(element.agree) > 0 ? element.agree : null })
+                    cancelArray.push({ 'x': element.name, 'y': parseInt(element.cancel) > 0 ? parseInt(element.cancel) : null, 'label': parseInt(element.cancel) > 0 ? element.cancel : null })
+                    finishArray.push({ 'x': element.name, 'y': parseInt(element.finish) > 0 ? parseInt(element.finish) : null, 'label': parseInt(element.finish) > 0 ? element.finish : null })
+                })
+            }
+            (selectedJournalistItems.length == 0 || (selectedJournalistItems.length > 0 && hasResult)) && journalistReportArray.length > 0 && setJournalistData({ 'wait2': wait2Array, 'wait3': wait3Array, 'agree': agreeArray, 'cancel': cancelArray, 'finish': finishArray })
+        }
+    }, [statictisJournalist])
+
+    const JournalistStatisticColumn = () => {
+        return <View style={{ backgroundColor: 'white' }}>
+            <View style={{ flexDirection: 'row', marginHorizontal: 5, marginTop: 5, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ backgroundColor: colors.waitConfirm, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ Phê duyệt</Text>
+                <View style={{ backgroundColor: colors.hadResponsed, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ phản hồi</Text>
+                <View style={{ backgroundColor: colors.waitWorking, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ làm việc</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', marginHorizontal: 5, marginTop: 5, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ backgroundColor: colors.cancel, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Hủy đăng ký</Text>
+                <View style={{ backgroundColor: colors.workDone, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Hoàn thành</Text>
+            </View>
+            <ScrollView horizontal={true}>
+                <View style={{ width: journalistData.wait2.length * 160 > SIZES.width ? journalistData.wait2.length * 160 : SIZES.width - 40, borderRadius: 20 }}>
+                    <VictoryChart
+                        domainPadding={50}
+                        width={journalistData.wait2.length * 160 > SIZES.width ? journalistData.wait2.length * 160 : SIZES.width - 40}
+                        height={300}
+                        style={{
+                            parent: {
+                                backgroundColor: "white",
+                                borderRadius: 20
+                            },
+                        }}
+                    >
+                        <VictoryAxis
+                            tickLabelComponent={<VictoryLabel angle={5} />}
+                            style={{
+                                axisLabel: { fontSize: 16, fill: "red", padding: 30, x: 0 },
+                                ticks: { stroke: "black", size: 5 },
+                                tickLabels: { fontSize: 13, padding: 2 },
+                                grid: { stroke: "lightgray" },
+                            }}
+                            tickCount={10}
+                        />
+
+                        <VictoryAxis
+                            dependentAxis
+                            style={{
+                                axisLabel: { fontSize: 16, fill: "red", padding: 30 },
+                                ticks: { stroke: "black", size: 5 },
+                                tickLabels: { fontSize: 12, padding: 5 },
+                                grid: { stroke: "lightgray" },
+                            }}
+                            tickCount={10}
+                        />
+                        <VictoryGroup
+                            offset={journalistData.wait2.length > 1 ? 12 : 20}
+                            style={{ marginLeft: 200 }}>
+                            <VictoryBar data={journalistData.wait2}
+                                style={{
+                                    data: {
+                                        fill: colors.waitConfirm,
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={journalistData.wait3}
+                                style={{
+                                    data: {
+                                        fill: colors.hadResponsed
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={journalistData.agree}
+                                style={{
+                                    data: {
+                                        fill: colors.waitWorking
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={journalistData.cancel}
+                                style={{
+                                    data: {
+                                        fill: colors.cancel
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={journalistData.finish}
+                                style={{
+                                    data: {
+                                        fill: colors.workDone
+                                    },
+                                }}
+                            />
+                        </VictoryGroup>
+                    </VictoryChart>
+                </View>
+            </ScrollView>
+        </View>
+    };
+
+    // chart theo đơn vị nhà nước 
+    useEffect(() => {
+        let wait2Array = []
+        let wait3Array = []
+        let agreeArray = []
+        let cancelArray = []
+        let finishArray = []
+        let instituteReportArray = []
+        // tạo mảng lưu theo tên của cơ quan nhá nước (dựa vào id giống nhau) rồi cộng dồn các trạng thái lại để thành mảng data cuổi cùng
+        if (statictisInstitute != null) {
+            let hasResult = false
+            if (statictisInstitute.groupedDataArray.length > 0) {
+                statictisInstitute.groupedDataArray.forEach(element => {
+                    if (element.data.length > 0) {
+                        element.data.forEach(dataElement => {
+
+                            // kiểm tra xem có chọn đơn vị báo chí cụ thể để thông kê không
+                            let isChooseInstituteForReport = false;
+                            selectedInstituteItems.forEach(element1 => {
+
+                                if (element1 == dataElement.idcqnn) {
+                                    isChooseInstituteForReport = true
+                                    hasResult = true
+                                }
+                            })
+                            // nếu có cơ quan báo chí trong danh sách chọn để báo cáo hoặc không chọn cqbc
+                            if (isChooseInstituteForReport == true || selectedInstituteItems.length == 0) {
+                                if (instituteReportArray.length == 0) {
+                                    instituteReportArray.push({
+                                        'id': dataElement.idcqnn, 'name': dataElement.namecqnn, 'wait2': parseInt(dataElement.wait2),
+                                        'wait3': parseInt(dataElement.wait3), 'agree': parseInt(dataElement.agree), 'cancel': parseInt(dataElement.cancel), 'finish': parseInt(dataElement.finish)
+                                    })
+                                }
+                                else {
+                                    let checkExist = false;
+                                    instituteReportArray.forEach(instituteElement => {
+                                        if (instituteElement.id == dataElement.idcqnn) {
+                                            checkExist = true
+                                            // cập nhật lại instituteReportArray tại instituteElement  
+                                            const newState = instituteReportArray.map(obj => {
+                                                // 👇️ if id equals 2, update country property
+                                                if (obj.id === dataElement.idcqnn) {
+                                                    return {
+                                                        'id': dataElement.idcqnn, 'name': dataElement.namecqnn, 'wait2': instituteElement.wait2 + parseInt(dataElement.wait2),
+                                                        'wait3': instituteElement.wait3 + parseInt(dataElement.wait3), 'agree': instituteElement.agree + parseInt(dataElement.agree),
+                                                        'cancel': instituteElement.cancel + parseInt(dataElement.cancel), 'finish': instituteElement.finish + parseInt(dataElement.finish)
+                                                    };
+                                                }
+                                                // 👇️ otherwise return the object as is
+                                                return obj;
+                                            });
+                                            instituteReportArray = newState;
+                                        }
+                                    })
+                                    if (checkExist == false) {
+                                        instituteReportArray.push({
+                                            'id': dataElement.idcqnn, 'name': dataElement.namecqnn, 'wait2': parseInt(dataElement.wait2),
+                                            'wait3': parseInt(dataElement.wait3), 'agree': parseInt(dataElement.agree), 'cancel': parseInt(dataElement.cancel), 'finish': parseInt(dataElement.finish)
+                                        })
+                                    }
+                                }
+                            }
+                        })
+                    }
+                })
+            }
+            if (statictisInstitute != null) {
+                instituteReportArray.length > 0 && instituteReportArray.forEach(element => {
+                    wait2Array.push({ 'x': element.name, 'y': parseInt(element.wait2) > 0 ? parseInt(element.wait2) : null, 'label': parseInt(element.wait2) > 0 ? element.wait2 : null })
+                    wait3Array.push({ 'x': element.name, 'y': parseInt(element.wait3) > 0 ? parseInt(element.wait3) : null, 'label': parseInt(element.wait3) > 0 ? element.wait3 : null })
+                    agreeArray.push({ 'x': element.name, 'y': parseInt(element.agree) > 0 ? parseInt(element.agree) : null, 'label': parseInt(element.agree) > 0 ? element.agree : null })
+                    cancelArray.push({ 'x': element.name, 'y': parseInt(element.cancel) > 0 ? parseInt(element.cancel) : null, 'label': parseInt(element.cancel) > 0 ? element.cancel : null })
+                    finishArray.push({ 'x': element.name, 'y': parseInt(element.finish) > 0 ? parseInt(element.finish) : null, 'label': parseInt(element.finish) > 0 ? element.finish : null })
+                })
+            }
+            (selectedInstituteItems.length == 0 || (selectedInstituteItems.length > 0 && hasResult)) && instituteReportArray.length > 0 && setInstituteReportData({ 'wait2': wait2Array, 'wait3': wait3Array, 'agree': agreeArray, 'cancel': cancelArray, 'finish': finishArray })
+        }
+    }, [statictisInstitute])
+
+    const InstituteStatisticColumn = () => {
+        return <View style={{ backgroundColor: 'white' }}>
+            <View style={{ flexDirection: 'row', marginHorizontal: 5, marginTop: 5, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ backgroundColor: colors.waitConfirm, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ Phê duyệt</Text>
+                <View style={{ backgroundColor: colors.hadResponsed, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ phản hồi</Text>
+                <View style={{ backgroundColor: colors.waitWorking, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ làm việc</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', marginHorizontal: 5, marginTop: 5, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ backgroundColor: colors.cancel, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Hủy đăng ký</Text>
+                <View style={{ backgroundColor: colors.workDone, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Hoàn thành</Text>
+            </View>
+            <ScrollView horizontal={true}>
+                <View style={{ width: instituteReportData.wait2.length * 160 > SIZES.width ? instituteReportData.wait2.length * 160 : SIZES.width - 40, borderRadius: 20 }}>
+                    <VictoryChart
+                        domainPadding={50}
+                        width={instituteReportData.wait2.length * 160 > SIZES.width ? instituteReportData.wait2.length * 160 : SIZES.width - 40}
+                        height={300}
+                        style={{
+                            parent: {
+                                backgroundColor: "white",
+                                borderRadius: 20
+                            },
+                        }}
+                    >
+                        <VictoryAxis
+                            tickLabelComponent={<VictoryLabel angle={5} />}
+                            style={{
+                                axisLabel: { fontSize: 16, fill: "red", padding: 30, x: 0 },
+                                ticks: { stroke: "black", size: 5 },
+                                tickLabels: { fontSize: 13, padding: 2 },
+                                grid: { stroke: "lightgray" },
+                            }}
+                            tickCount={10}
+                        />
+
+                        <VictoryAxis
+                            dependentAxis
+                            style={{
+                                axisLabel: { fontSize: 16, fill: "red", padding: 30 },
+                                ticks: { stroke: "black", size: 5 },
+                                tickLabels: { fontSize: 12, padding: 5 },
+                                grid: { stroke: "lightgray" },
+                            }}
+                            tickCount={10}
+                        />
+                        <VictoryGroup
+                            offset={instituteReportData.wait2.length > 1 ? 12 : 20}
+                            style={{ marginLeft: 200 }}>
+                            <VictoryBar data={instituteReportData.wait2}
+                                style={{
+                                    data: {
+                                        fill: colors.waitConfirm,
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={instituteReportData.wait3}
+                                style={{
+                                    data: {
+                                        fill: colors.hadResponsed
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={instituteReportData.agree}
+                                style={{
+                                    data: {
+                                        fill: colors.waitWorking
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={instituteReportData.cancel}
+                                style={{
+                                    data: {
+                                        fill: colors.cancel
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={instituteReportData.finish}
+                                style={{
+                                    data: {
+                                        fill: colors.workDone
+                                    },
+                                }}
+                            />
+                        </VictoryGroup>
+                    </VictoryChart>
+                </View>
+            </ScrollView>
+        </View>
+    };
+
+    // chart theo quạn huyện
+    useEffect(() => {
+        debugger
+        if (statictisProvince.length == 0) {
+            debugger
+            return
+        }
+        let wait2Array = []
+        let wait3Array = []
+        let agreeArray = []
+        let cancelArray = []
+        let finishArray = []
+
+        statictisProvince.length > 0 && statictisProvince.forEach(element => {
+            wait2Array.push({ 'x': element.province, 'y': parseInt(element.wait2) > 0 ? parseInt(element.wait2) : null, 'label': parseInt(element.wait2) > 0 ? element.wait2 : null })
+            wait3Array.push({ 'x': element.province, 'y': parseInt(element.wait3) > 0 ? parseInt(element.wait3) : null, 'label': parseInt(element.wait3) > 0 ? element.wait3 : null })
+            agreeArray.push({ 'x': element.province, 'y': parseInt(element.agree) > 0 ? parseInt(element.agree) : null, 'label': parseInt(element.agree) > 0 ? element.agree : null })
+            cancelArray.push({ 'x': element.province, 'y': parseInt(element.cancel) > 0 ? parseInt(element.cancel) : null, 'label': parseInt(element.cancel) > 0 ? element.cancel : null })
+            finishArray.push({ 'x': element.province, 'y': parseInt(element.finish) > 0 ? parseInt(element.finish) : null, 'label': parseInt(element.finish) > 0 ? element.finish : null });
+        })
+        setProvinceData({ 'wait2': wait2Array, 'wait3': wait3Array, 'agree': agreeArray, 'cancel': cancelArray, 'finish': finishArray })
+    }, [statictisProvince])
+
+    const ProvinceStatisticColumn = () => {
+        return <View style={{ backgroundColor: 'white' }}>
+            <View style={{ flexDirection: 'row', marginHorizontal: 5, marginTop: 5, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ backgroundColor: colors.waitConfirm, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ Phê duyệt</Text>
+                <View style={{ backgroundColor: colors.hadResponsed, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ phản hồi</Text>
+                <View style={{ backgroundColor: colors.waitWorking, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Chờ làm việc</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', marginHorizontal: 5, marginTop: 5, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ backgroundColor: colors.cancel, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Hủy đăng ký</Text>
+                <View style={{ backgroundColor: colors.workDone, width: 10, height: 10, borderRadius: 50, margin: 5 }} />
+                <Text style={{ color: 'black', fontSize: 12 }}>Hoàn thành</Text>
+            </View>
+            <ScrollView horizontal={true}>
+                <View style={{ width: provinceData.wait2.length * 160 > SIZES.width ? provinceData.wait2.length * 160 : SIZES.width - 40, borderRadius: 20 }}>
+                    <VictoryChart
+                        domainPadding={50}
+                        width={provinceData.wait2.length * 160 > SIZES.width ? provinceData.wait2.length * 160 : SIZES.width - 40}
+                        height={300}
+                        style={{
+                            parent: {
+                                backgroundColor: "white",
+                                borderRadius: 20
+                            },
+                        }}
+                    >
+                        <VictoryAxis
+                            tickLabelComponent={<VictoryLabel angle={5} />}
+                            style={{
+                                axisLabel: { fontSize: 16, fill: "red", padding: 30, x: 0 },
+                                ticks: { stroke: "black", size: 5 },
+                                tickLabels: { fontSize: 13, padding: 2 },
+                                grid: { stroke: "lightgray" },
+                            }}
+                            tickCount={10}
+                        />
+
+                        <VictoryAxis
+                            dependentAxis
+                            style={{
+                                axisLabel: { fontSize: 16, fill: "red", padding: 30 },
+                                ticks: { stroke: "black", size: 5 },
+                                tickLabels: { fontSize: 12, padding: 5 },
+                                grid: { stroke: "lightgray" },
+                            }}
+                            tickCount={10}
+                        />
+                        <VictoryGroup
+                            offset={provinceData.wait2.length > 1 ? 12 : 20}
+                            style={{ marginLeft: 200 }}>
+                            <VictoryBar data={provinceData.wait2}
+                                style={{
+                                    data: {
+                                        fill: colors.waitConfirm,
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={provinceData.wait3}
+                                style={{
+                                    data: {
+                                        fill: colors.hadResponsed
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={provinceData.agree}
+                                style={{
+                                    data: {
+                                        fill: colors.waitWorking
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={provinceData.cancel}
+                                style={{
+                                    data: {
+                                        fill: colors.cancel
+                                    },
+                                }}
+                            />
+                            <VictoryBar data={provinceData.finish}
+                                style={{
+                                    data: {
+                                        fill: colors.workDone
+                                    },
+                                }}
+                            />
+                        </VictoryGroup>
+                    </VictoryChart>
+                </View>
+            </ScrollView>
+        </View>
+    };
+
+
+    //Tìm kiếm theo cụm
+    const filterItems = (searchText, items, _selectedItems) => {
+        const filteredItems = items.filter((item) => {
+            const itemName = item.name.toLowerCase();
+            const searchTerm = searchText.toLowerCase();
+            const hasItemMatch = itemName.includes(searchTerm);
+            const hasChildMatch =
+                item.children &&
+                item.children.some(
+                    (child) => child.name.toLowerCase().indexOf(searchTerm) !== -1
+                );
+            return hasItemMatch || hasChildMatch;
+        });
+
+        return filteredItems;
+    };
+
+    return (
+        <SafeAreaView style={styles.saveAreaViewContainer}>
+            {showLoading ? <AppLoader /> : null}
+            {fromDate && <DatePicker
+                title="Chọn từ ngày"
+                confirmText="Chọn"
+                cancelText="Hủy"
+                modal
+                open={openFromDate}
+                date={fromDate}
+                onConfirm={(date) => {
+                    setOpenFromDate(false)
+                    setFromDate(date)
+                }}
+                onCancel={() => {
+                    setOpenFromDate(false)
+                }}
+                mode="date"
+                theme="auto"
+            />}
+
+            {toDate && <DatePicker
+                title="Chọn đến ngày"
+                confirmText="Chọn"
+                cancelText="Hủy"
+                modal
+                open={openToDate}
+                date={toDate}
+                onConfirm={(date) => {
+                    setOpenToDate(false)
+                    setToDate(date)
+                }}
+                onCancel={() => {
+                    setOpenToDate(false)
+                }}
+                mode="date"
+                theme="auto"
+            />}
+            <StatusBar backgroundColor="#FFF" barStyle="dark-content" />
+            {/* Category Header Section */}
+            {/* // chọn từ ngày và đến ngày cho thống kê */}
+            <ScrollView contentContainerStyle={{ paddingBottom: 10, backgroundColor: COLORS.background }}>
+                <View style={{
+                    backgroundColor: 'white', padding: 20,
+                    margin: 20, borderRadius: SIZES.radius,
+                    ...styles.shadow
+                }}>
+                    <View style={{ flexDirection: 'row' }}>
+                        <View style={{ flex: 1, justifyContent: 'center' }}>
+                            <Text style={{ ...FONTS.h3, color: '#000', fontWeight: 'bold' }}>
+                                Từ ngày: <Text style={{ ...FONTS.h3, color: '#000', }}>
+                                    {fromDateString}
+                                </Text>
+                            </Text>
+                        </View>
+
+                        {/* // nếu PV đã join vào 1 session có săn thì không hẹn lại */}
+                        <View style={{ justifyContent: 'center', marginEnd: -10 }}>
+                            <TouchableOpacity style={[styles.touchOpacity, { margin: 0, marginBottom: 0 }]}
+                                onPress={() => {
+                                    setOpenFromDate(true)
+                                }
+                                }>
+                                <Ionicons name='calendar' style={{ color: 'white', fontSize: 20, marginRight: 10 }} />
+                                <Text style={{ fontSize: 14, color: 'white', fontWeight: 'bold' }}>
+                                    Chọn ngày
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', paddingTop: 15 }}>
+                        <View style={{ flex: 1, justifyContent: 'center', }}>
+                            <Text style={{ ...FONTS.h3, color: '#000', fontWeight: 'bold' }}>
+                                Đến ngày: <Text style={{ ...FONTS.h3, color: '#000' }}>
+                                    {toDateString}
+                                </Text>
+                            </Text>
+                        </View>
+
+                        {/* // nếu PV đã join vào 1 session có săn thì không hẹn lại */}
+                        <View style={{ justifyContent: 'center', marginEnd: -10 }}>
+                            <TouchableOpacity style={[styles.touchOpacity, { margin: 0, marginBottom: 0 }]}
+                                onPress={() => {
+                                    setOpenToDate(true)
+                                }}>
+                                <Ionicons name='calendar' style={{ color: 'white', fontSize: 20, marginRight: 10 }} />
+                                <Text style={{ fontSize: 14, color: 'white', fontWeight: 'bold' }}>
+                                    Chọn ngày
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    <Text style={{ ...FONTS.h3, color: '#000', fontWeight: 'bold', alignSelf: 'center', marginTop: 10, marginBottom: 5 }}>Chọn đối tượng thống kê</Text>
+                    <SegmentedControl
+                        style={{ marginTop: 10 }}
+                        values={['Tất cả', 'Thường trú', 'Vãng lai']}
+                        selectedIndex={segmentIndex}
+                        onChange={(event) => {
+                            setIsClickOnSegment(true)
+                            setSegmentIndex(event.nativeEvent.selectedSegmentIndex);
+                        }}
+                    />
+                </View>
+                <View style={{ padding: 20 }}>
+                    <Text style={styles.titleHeader}>Thống kê tổng thể </Text>
+                    <TouchableOpacity
+                        style={styles.touchOpacity}
+                        onPress={() => onShowChartTotal()}>
+                        <Ionicons name='pie-chart' style={{ color: 'white', fontSize: 15, marginRight: 10 }} />
+                        <Text style={{ fontSize: 13, color: 'white', fontWeight: 'bold' }}> Xem thống kê </Text>
+                    </TouchableOpacity>
+                    {renderChart()}
+                    {renderStaticsSummary()}
+                </View>
+
+                {/* {empty()} */}
+                <View style={{ padding: 20 }}>
+                    <Text style={styles.titleHeader}>{segmentIndex == 0 ? 'Thống kê theo đơn vị báo chí' : segmentIndex == 1 ? 'Thống kê theo đơn vị báo chí thường trú' :
+                        'Thống kê theo đơn vị báo chí vãng lai'} </Text>
+                    <View style={{
+                        width: '100%',
+                        backgroundColor: COLORS.white,
+                        borderWidth: 1, paddingBottom: 5,
+                        borderRadius: SIZES.radius,
+                        borderColor: COLORS.gray,
+                        paddingHorizontal: 10,
+                        marginBottom: 10
+                    }}>
+                        <SectionedMultiSelect
+                            items={segmentIndex == 0 ? allPressInstituteData : segmentIndex == 1 ? pressInstituteData : strangePressInstituteData}
+                            IconRenderer={Icon1}
+                            uniqueKey="id"
+                            subKey="children"
+                            selectText="Chọn đơn vị cần thống kê"
+                            hideSearch={false}
+                            onSelectedItemsChange={onSelectedItemsChange}
+                            selectedItems={selectedPressAgencyItems}
+                            selectedText="Đã chọn"
+                            searchPlaceholderText="Tìm kiếm"
+                            confirmText="Xác nhận chọn"
+                            selectLabelNumberOfLines={2}
+                            showCancelButton={true}
+                            styles={{
+                                chipContainer: { //Container chính của chíp
+                                    backgroundColor: '#F3F3F3',
+                                    borderRadius: 20,
+                                    margin: 5,
+                                    padding: 5,
+                                },
+                                chipIcon: {
+                                    color: colors.newprimary,// màu dấu x khi render ra chip
+                                },
+                                chipText: {
+                                    color: 'black',// màu name user khi render ra chip
+                                },
+                                selectedSubItemText: {
+                                    color: colors.workDone,// màu cho mỗi mục con đã chọn.
+                                },
+                                cancelButton: {
+                                    backgroundColor: colors.cancel,
+                                },
+                                button: {
+                                    backgroundColor: '#3479C8',// màu confirm button
+                                    padding: 10,
+                                },
+                            }}
+                            noResultsComponent={
+                                <View style={{
+                                    marginTop: 30,
+                                    justifyContent: 'center',
+                                    alignItems: 'center'
+                                }}>
+                                    <Image style={{ height: 100, width: 100 }}
+                                        resizeMode="cover"
+                                        source={require("../assets/images/nothingFound.png")} />
+                                    <Text style={{
+                                        color: 'black',
+                                        fontWeight: 'bold',
+                                        fontSize: 16
+                                    }}>Không tìm thấy kết quả phù hợp
+                                    </Text>
+                                    <Text style={{
+                                        color: '#858181',
+                                        fontSize: 16
+                                    }}>Bạn thử tìm từ khóa khác nhé.
+                                    </Text>
+                                </View>}
+                        />
+                    </View>
+                    <View style={{ flexDirection: 'row', padding: 3 }}>
+                        <TouchableOpacity
+                            style={[styles.touchOpacity, { width: '60%', marginEnd: 5 }]}
+                            onPress={() => onShowChartOfPressAgency()
+                            }>
+                            <Ionicons name='pie-chart' style={{ color: 'white', fontSize: 15, marginRight: 10 }} />
+                            <Text style={{ fontSize: 13, color: 'white', fontWeight: 'bold' }}> Xem thống kê </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.touchOpacity, { width: '40%' }]}
+                            onPress={() => ExportToExcel.handleExportPress(pressAgencyData, ExportToExcel.ExportTypeEnum.DKLV, ExportToExcel.ExportRoleEnum.BC,
+                                segmentIndex == 0 ? 'DS_DKLV_TatCa' : segmentIndex == 1 ? 'DS_DKLV_ThuongTru' : 'DS_DKLV_VangLai')
+                            }>
+                            <Export name='file-export' style={{ color: 'white', fontSize: 15, marginRight: 10 }} />
+                            <Text style={{ fontSize: 13, color: 'white', fontWeight: 'bold' }}> Xuất báo cáo</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {pressAgencyData != null ? StatisticColumn() : <Text style={styles.titleNoDataForStatictis}> Không có dữ liệu cho thống kê </Text>}
+                </View>
+
+                <View style={{ padding: 20 }}>
+                    <Text style={styles.titleHeader}> {segmentIndex == 0 ? 'Thống kê theo phóng viên' : segmentIndex == 1 ? 'Thống kê theo phóng viên thường trú' :
+                        'Thống kê theo phóng viên vãng lai'}</Text>
+                    <View style={{
+                        width: '100%', backgroundColor: 'red',
+                        backgroundColor: COLORS.white,
+                        borderWidth: 1, paddingBottom: 5,
+                        borderRadius: SIZES.radius, borderColor: COLORS.gray,
+                        paddingHorizontal: 10, marginBottom: 10
+                    }}>
+                        <DropdownMultiSelect
+                            items={segmentIndex == 0 ? allJounalistObjArray : segmentIndex == 1 ? jounalistObjArray : strangeJounalistObjArray}
+                            IconRenderer={Icon1}
+                            uniqueKey="id"
+                            subKey="children"
+                            selectText="Chọn phóng viên cần thống kê"
+                            showDropDowns={true}
+                            readOnlyHeadings={true}
+                            hideSearch={false}
+                            onSelectedItemsChange={onSelectedJournalistItemsChange}
+                            selectedItems={selectedJournalistItems}
+                            searchText={searchText}
+                            onSearchTextChange={handleSearchTextChange}
+                            filterItems={filterItems}
+                        />
+                    </View>
+                    <View style={{ flexDirection: 'row', padding: 3 }}>
+                        <TouchableOpacity
+                            style={[styles.touchOpacity, { width: '60%', marginEnd: 5 }]}
+                            onPress={() => onShowChartOfJournalist()
+                            }>
+                            <Ionicons name='pie-chart' style={{ color: 'white', fontSize: 15, marginRight: 10 }} />
+                            <Text style={{ fontSize: 13, color: 'white', fontWeight: 'bold' }}> Xem thống kê </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.touchOpacity, { width: '40%' }]}
+                            onPress={() => ExportToExcel.handleExportPress(journalistData, ExportToExcel.ExportTypeEnum.DKLV, ExportToExcel.ExportRoleEnum.PV,
+                                segmentIndex == 0 ? 'DS_DKLV_TatCa' : segmentIndex == 1 ? 'DS_DKLV_ThuongTru' : 'DS_DKLV_VangLai')
+                            }>
+                            <Export name='file-export' style={{ color: 'white', fontSize: 15, marginRight: 10 }} />
+                            <Text style={{ fontSize: 13, color: 'white', fontWeight: 'bold' }}> Xuất báo cáo</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {journalistData !== null ? JournalistStatisticColumn() : <Text style={styles.titleNoDataForStatictis}> Không có dữ liệu cho thống kê </Text>}
+                </View>
+
+                <View style={{ padding: 20 }}>
+                    <Text style={styles.titleHeader}> {segmentIndex == 0 ? 'Thống kê theo đơn vị tiếp nhận' : segmentIndex == 1 ? 'Thống kê thường trú theo đơn vị tiếp nhận' :
+                        'Thống kê vãng lai theo đơn vị tiếp nhận'}</Text>
+                    <View style={{
+                        width: '100%',
+                        backgroundColor: COLORS.white,
+                        borderWidth: 1, paddingBottom: 5,
+                        borderRadius: SIZES.radius, borderColor: COLORS.gray,
+                        paddingHorizontal: 10, marginBottom: 10
+                    }}>
+                        <SectionedMultiSelect
+                            items={instituteData}
+                            IconRenderer={Icon1}
+                            uniqueKey="id"
+                            subKey="children"
+                            selectText="Chọn đơn vị cần thống kê"
+                            hideSearch={false}
+                            onSelectedItemsChange={onSelectedInstituteItemsChange}
+                            selectedItems={selectedInstituteItems}
+                            selectedText="Đã chọn"
+                            searchPlaceholderText="Tìm kiếm"
+                            confirmText="Xác nhận chọn"
+                            selectLabelNumberOfLines={2}
+                            showCancelButton={true}
+                            styles={{
+                                chipContainer: { //Container chính của chíp
+                                    backgroundColor: '#F3F3F3',
+                                    borderRadius: 20,
+                                    margin: 5,
+                                    padding: 5,
+                                },
+                                chipIcon: {
+                                    color: colors.newprimary,// màu dấu x khi render ra chip
+                                },
+                                chipText: {
+                                    color: 'black',// màu name user khi render ra chip
+                                },
+                                selectedSubItemText: {
+                                    color: colors.workDone,// màu cho mỗi mục con đã chọn.
+                                },
+                                cancelButton: {
+                                    backgroundColor: colors.cancel,
+                                },
+                                button: {
+                                    backgroundColor: '#3479C8',// màu confirm button
+                                    padding: 10,
+                                },
+                            }}
+                            noResultsComponent={
+                                <View style={{
+                                    marginTop: 30,
+                                    justifyContent: 'center',
+                                    alignItems: 'center'
+                                }}>
+                                    <Image style={{ height: 100, width: 100 }}
+                                        resizeMode="cover"
+                                        source={require("../assets/images/nothingFound.png")} />
+                                    <Text style={{
+                                        color: 'black',
+                                        fontWeight: 'bold',
+                                        fontSize: 16
+                                    }}>Không tìm thấy kết quả phù hợp
+                                    </Text>
+                                    <Text style={{
+                                        color: '#858181',
+                                        fontSize: 16
+                                    }}>Bạn thử tìm từ khóa khác nhé.
+                                    </Text>
+                                </View>}
+                        />
+                    </View>
+
+                    <View style={{ flexDirection: 'row', padding: 3 }}>
+                        <TouchableOpacity
+                            style={[styles.touchOpacity, { width: '60%', marginEnd: 5 }]}
+                            onPress={() => onShowChartOfInstitute()
+                            }>
+                            <Ionicons name='pie-chart' style={{ color: 'white', fontSize: 15, marginRight: 10 }} />
+                            <Text style={{ fontSize: 13, color: 'white', fontWeight: 'bold' }}> Xem thống kê </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.touchOpacity, { width: '40%' }]}
+                            onPress={() => ExportToExcel.handleExportPress(instituteReportData, ExportToExcel.ExportTypeEnum.DKLV, ExportToExcel.ExportRoleEnum.NN,
+                                segmentIndex == 0 ? 'DS_DKLV_TatCa' : segmentIndex == 1 ? 'DS_DKLV_ThuongTru' : 'DS_DKLV_VangLai')
+                            }>
+                            <Export name='file-export' style={{ color: 'white', fontSize: 15, marginRight: 10 }} />
+                            <Text style={{ fontSize: 13, color: 'white', fontWeight: 'bold' }}> Xuất báo cáo</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {instituteReportData != null ? InstituteStatisticColumn() : <Text style={styles.titleNoDataForStatictis}> Không có dữ liệu cho thống kê </Text>}
+                </View>
+
+                <View style={{ padding: 20 }}>
+                    <Text style={styles.titleHeader}> {segmentIndex == 0 ? 'Thống kê theo địa bàn' : segmentIndex == 1 ? 'Thống kê đăng ký thường trú theo địa bàn' :
+                        'Thống kê đăng ký vãng lai theo địa bàn'}</Text>
+
+                    <View style={{ flexDirection: 'row', padding: 3 }}>
+                        <TouchableOpacity
+                            style={[styles.touchOpacity, { width: '60%', marginEnd: 5 }]}
+                            onPress={() => onShowChartOfInstitute()
+                            }>
+                            <Ionicons name='pie-chart' style={{ color: 'white', fontSize: 15, marginRight: 10 }} />
+                            <Text style={{ fontSize: 13, color: 'white', fontWeight: 'bold' }}> Xem thống kê </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.touchOpacity, { width: '40%' }]}
+                            onPress={() => ExportToExcel.handleExportPress(instituteReportData, ExportToExcel.ExportTypeEnum.DKLV, ExportToExcel.ExportRoleEnum.DB,
+                                segmentIndex == 0 ? 'DS_DKLV_DiaBan_TatCa' : segmentIndex == 1 ? 'DS_DKLV_DiaBan_ThuongTru' : 'DS_DKLV_DiaBan_VangLai')
+                            }>
+                            <Export name='file-export' style={{ color: 'white', fontSize: 15, marginRight: 10 }} />
+                            <Text style={{ fontSize: 13, color: 'white', fontWeight: 'bold' }}> Xuất báo cáo</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {provinceData !== null ? ProvinceStatisticColumn() : <Text style={styles.titleNoDataForStatictis}> Không có dữ liệu cho thống kê </Text>}
+                </View>
+            </ScrollView>
+        </SafeAreaView>
+    );
+};
+
+const styles = StyleSheet.create({
+    shadow: {
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 10,
+            height: 10,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    headerTitle: { color: '#000', fontWeight: 'bold', fontSize: 16 },
+    saveAreaViewContainer: { flex: 1, backgroundColor: COLORS.background },
+    scrollViewContainer: {
+        flexGrow: 1,
+    },
+    titleHeader: {
+        ...FONTS.h3,
+        fontWeight: 'bold',
+        color: colors.newprimary,
+        marginBottom: 10
+    },
+    titleNoDataForStatictis: {
+        ...FONTS.h3,
+        fontWeight: 'bold',
+        marginBottom: 5, alignSelf: 'center'
+    },
+    touchOpacity: {
+        backgroundColor: colors.newprimary,
+        borderRadius: 10,
+        alignContent: 'center',
+        justifyContent: 'center',
+        padding: 10,
+        flexDirection: 'row',
+        marginBottom: 10
+    },
+});
+
+export default StatictisRegisterManageScreen;
