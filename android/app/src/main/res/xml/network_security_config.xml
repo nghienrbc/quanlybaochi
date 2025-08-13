@@ -9,6 +9,7 @@
     </domain-config>
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
+            <certificates src="system" /> 
             <certificates src="@raw/quangbinh_gov_vn" />
         </trust-anchors>
     </base-config>
