@@ -22,4 +22,4 @@ import {name as appName} from './app.json';
 import App from './navigation/App'
 
 //AppRegistry.registerComponent(appName, () => ProfileScreen);
-AppRegistry.registerComponent(appName, () => () => <App/>);
+AppRegistry.registerComponent(appName, () => App);
