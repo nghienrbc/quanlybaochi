@@ -14,7 +14,7 @@ import {
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import {fontSizes, colors} from '../constants'
 import Icon from 'react-native-vector-icons/FontAwesome5'
-import 'react-native-gesture-handler'
+// import 'react-native-gesture-handler' // Tạm comment để test build
 import { View } from 'react-native'
 
 const Tab = createBottomTabNavigator()
