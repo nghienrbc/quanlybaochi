@@ -108,8 +108,8 @@ android {
         applicationId "com.pressmanagement"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 6
-        versionName "1.1"
+        versionCode 7
+        versionName "1.2"
         vectorDrawables.useSupportLibrary = true 
     } 
     signingConfigs {
@@ -150,6 +150,19 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+// Fix vector icons task dependency
+afterEvaluate {
+    def copyReactNativeVectorIconFonts = tasks.findByName("copyReactNativeVectorIconFonts")
+    if (copyReactNativeVectorIconFonts) {
+        tasks.matching { it.name.contains("generateReleaseLintVitalReportModel") }.all {
+            it.dependsOn copyReactNativeVectorIconFonts
+        }
+        tasks.matching { it.name.contains("lintVitalAnalyzeRelease") }.all {
+            it.dependsOn copyReactNativeVectorIconFonts
+        }
     }
 }
  
